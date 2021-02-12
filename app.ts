@@ -16,6 +16,7 @@ router.post('/roman', async (ctx: RouterContext) => {
   ctx.assert(appKey, 404, 'No Roman auth found.');
 
   const { type, text, userId } = await ctx.request.body({ type: 'json' }).value;
+  ctx.response.status = 200;
 
   if (userId === adminId) {
     if (
@@ -27,14 +28,13 @@ router.post('/roman', async (ctx: RouterContext) => {
       type === 'conversation.new_text'
       && text.startsWith('/broadcast')
     ) {
-      ctx.response.status = await broadcastTextToWire(text.substring(10), appKey);
+      const { message } = await broadcastTextToWire(text.substring(10), appKey);
+      ctx.response.body = wireMessage(`_${message}_`);
     }
   } else if (
     type === 'conversation.init'
   ) {
     ctx.response.body = wireMessage('Thanks for subscribing to awesome broadcast.');
-  } else {
-    ctx.response.status = 200;
   }
 });
 
@@ -51,11 +51,10 @@ const broadcastTextToWire = async (message: string, appKey: string) => {
     {
       method: 'POST',
       headers: { 'app-key': appKey, 'content-type': 'application/json' },
-      body: JSON.stringify({ type: 'text', text: { data: message } })
+      body: JSON.stringify(wireMessage(message))
     }
   );
-  console.log(`Received response: ${await response.json()}`);
-  return response.status;
+  return response.json();
 };
 
 /* ----------------- WIRE Common ----------------- */
