@@ -29,7 +29,7 @@ router.post('/roman', async (ctx: RouterContext) => {
       && text.startsWith('/broadcast')
     ) {
       const { message } = await broadcastTextToWire(text.substring(10), appKey);
-      ctx.response.body = wireMessage(message);
+      ctx.response.body = wireMessage(`_${message}_`);
     }
   } else if (
     type === 'conversation.init'
@@ -51,7 +51,7 @@ const broadcastTextToWire = async (message: string, appKey: string) => {
     {
       method: 'POST',
       headers: { 'app-key': appKey, 'content-type': 'application/json' },
-      body: JSON.stringify({ type: 'text', text: { data: message } })
+      body: JSON.stringify(wireMessage(message))
     }
   );
   return response.json();
