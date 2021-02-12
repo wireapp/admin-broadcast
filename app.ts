@@ -40,7 +40,7 @@ router.post('/roman', async (ctx: RouterContext) => {
 
 const getConfigurationForAuth = async (authToken: string) => {
   const authConfiguration = await Deno.readTextFile(authConfigurationPath).then(text => JSON.parse(text));
-  return authConfiguration[authToken];
+  return authConfiguration[authToken] ?? {};
 };
 
 const wireMessage = (message: string) => ({ type: 'text', text: { data: message } });
