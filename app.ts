@@ -16,6 +16,7 @@ router.post('/roman', async (ctx: RouterContext) => {
   ctx.assert(appKey, 404, 'No Roman auth found.');
 
   const { type, text, userId } = await ctx.request.body({ type: 'json' }).value;
+  ctx.response.status = 200;
 
   if (userId === adminId) {
     if (
@@ -33,8 +34,6 @@ router.post('/roman', async (ctx: RouterContext) => {
     type === 'conversation.init'
   ) {
     ctx.response.body = wireMessage('Thanks for subscribing to awesome broadcast.');
-  } else {
-    ctx.response.status = 200;
   }
 });
 
