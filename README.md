@@ -1,4 +1,4 @@
-# Admin Broadcast Bot in TypeScript
+# Admin Broadcast Bot
 
 This bot allows administrator to broadcast messages on Wire - the administrator writes the message to this bot and the bot broadcast that message to every conversation the bot is in.
 
