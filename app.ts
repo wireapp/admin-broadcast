@@ -12,13 +12,13 @@ router.post('/roman', async (ctx: RouterContext) => {
   const [, authorizationToken] = ctx.request.headers.get('authorization')?.split(' ') ?? [];
   ctx.assert(authorizationToken, 401, 'Authorization required.');
 
-  const { adminId, appKey } = await getConfigurationForAuth(authorizationToken);
-  ctx.assert(appKey, 404, 'No Roman auth found.');
+  const { admins, appKey } = await getConfigurationForAuth(authorizationToken);
+  ctx.assert(admins && appKey, 404, 'No Roman auth found.');
 
   const { type, text, userId } = await ctx.request.body({ type: 'json' }).value;
   ctx.response.status = 200;
 
-  if (userId === adminId) {
+  if (admins.includes(userId)) {
     if (
       type === 'conversation.init' ||
       (type === 'conversation.new_text' && text.startsWith('/help'))
@@ -40,7 +40,7 @@ router.post('/roman', async (ctx: RouterContext) => {
 
 const getConfigurationForAuth = async (authToken: string) => {
   const authConfiguration = await Deno.readTextFile(authConfigurationPath).then(text => JSON.parse(text));
-  return authConfiguration[authToken];
+  return authConfiguration[authToken] ?? {};
 };
 
 const wireMessage = (message: string) => ({ type: 'text', text: { data: message } });
