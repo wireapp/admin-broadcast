@@ -13,7 +13,7 @@ router.post('/roman', async (ctx: RouterContext) => {
   ctx.assert(authorizationToken, 401, 'Authorization required.');
 
   const { admins, appKey } = await getConfigurationForAuth(authorizationToken);
-  ctx.assert(appKey, 404, 'No Roman auth found.');
+  ctx.assert(admins && appKey, 404, 'No Roman auth found.');
 
   const { type, text, userId } = await ctx.request.body({ type: 'json' }).value;
   ctx.response.status = 200;
