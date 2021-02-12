@@ -8,4 +8,4 @@ The bot is based on the JavaScript runtime [Deno](https://deno.land/) and [Oak](
 
 ### Configuration
 
-The bnot uses few environmental variables for its configuration, for complete list see first lines of the [code](app.ts).
+The bot uses few environmental variables for its configuration, for complete list see first lines of the [code](app.ts).
