@@ -27,15 +27,15 @@ router.post('/roman', async (ctx: RouterContext) => {
       type === 'conversation.new_text'
       && text.startsWith('/broadcast')
     ) {
-      await broadcastTextToWire(text.substring(10), appKey);
+      ctx.response.status = await broadcastTextToWire(text.substring(10), appKey);
     }
   } else if (
     type === 'conversation.init'
   ) {
     ctx.response.body = wireMessage('Thanks for subscribing to awesome broadcast.');
+  } else {
+    ctx.response.status = 200;
   }
-  
-  ctx.response.status = 200;
 });
 
 const getConfigurationForAuth = async (authToken: string) => {
