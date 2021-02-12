@@ -18,7 +18,7 @@ router.post('/roman', async (ctx: RouterContext) => {
   const { type, text, userId } = await ctx.request.body({ type: 'json' }).value;
   ctx.response.status = 200;
 
-  if (userId in admins) {
+  if (admins.includes(userId)) {
     if (
       type === 'conversation.init' ||
       (type === 'conversation.new_text' && text.startsWith('/help'))
