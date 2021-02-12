@@ -28,7 +28,8 @@ router.post('/roman', async (ctx: RouterContext) => {
       type === 'conversation.new_text'
       && text.startsWith('/broadcast')
     ) {
-      ctx.response.status = await broadcastTextToWire(text.substring(10), appKey);
+      const { message } = await broadcastTextToWire(text.substring(10), appKey);
+      ctx.response.body = wireMessage(message);
     }
   } else if (
     type === 'conversation.init'
@@ -53,8 +54,7 @@ const broadcastTextToWire = async (message: string, appKey: string) => {
       body: JSON.stringify({ type: 'text', text: { data: message } })
     }
   );
-  console.log(await response.json());
-  return response.status;
+  return response.json();
 };
 
 /* ----------------- WIRE Common ----------------- */
