@@ -53,7 +53,7 @@ const broadcastTextToWire = async (message: string, appKey: string) => {
       body: JSON.stringify({ type: 'text', text: { data: message } })
     }
   );
-  console.log(`Received response: ${await response.json()}`);
+  console.log(await response.json());
   return response.status;
 };
 
