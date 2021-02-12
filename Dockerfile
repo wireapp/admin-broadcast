@@ -15,4 +15,4 @@ RUN echo $release_version > $RELEASE_FILE_PATH
 
 EXPOSE 8080
 
-CMD ["run", "--allow-net", "--allow-env", "app.ts"]
+CMD ["run", "--allow-net", "--allow-env", "--allow-read","app.ts"]
