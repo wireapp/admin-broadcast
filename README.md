@@ -1,6 +1,6 @@
-# Echo Roman Bot in TypeScript
+# Admin Broadcast Bot in TypeScript
 
-The aim of this repository is to show a technological demo of an echo bot for Wire using [Roman](https://github.com/wireapp/roman) proxy.
+This bot allows administrator to broadcast messages on Wire - the administrator writes the message to this bot and the bot broadcast that message to every conversation the bot is in.
 
 ## Development
 
