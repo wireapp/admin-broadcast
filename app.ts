@@ -18,43 +18,39 @@ router.post('/roman', async (ctx: RouterContext) => {
   const { type, text, userId }: { type: string, text: string, userId: string }
     = await ctx.request.body({ type: 'json' }).value;
   ctx.response.status = 200;
-
+  let maybeMessage;
   if (admins.includes(userId)) {
-    if (
-      type === 'conversation.init' ||
-      (type === 'conversation.new_text' && text.startsWith('/help'))
-    ) {
-      ctx.response.body = wireMessage('Write `/broadcast message` to broadcast the message to users. Or /stats <broadcast id> for stats');
-    } else if (
-      type === 'conversation.new_text'
-      && text.startsWith('/broadcast')
-    ) {
-      const stats = await broadcastTextToWire(text.substring(10), appKey);
-      ctx.response.body = wireMessage(convertStats(stats));
-    } else if (
-      type === 'conversation.new_text'
-      && text.startsWith('/stats')
-    ) {
-      const stats = await getBroadcastStats(appKey);
-      ctx.response.body = wireMessage(convertStats(stats));
+    const helpMessage = 'Write `/broadcast message` to broadcast the message to users. Or /stats for stats of the last broadcast.';
+    switch (type) {
+      case 'conversation.init':
+        maybeMessage = helpMessage;
+        break;
+      case 'conversation.new_text':
+        if (text.startsWith('/help')) {
+          maybeMessage = helpMessage;
+        } else if (text.startsWith('/broadcast')) {
+          maybeMessage = await broadcastTextToWire(text.substring(10), appKey).then(convertStats);
+        } else if (text.startsWith('/stats')) {
+          maybeMessage = await getBroadcastStats(appKey).then(convertStats);
+        }
+        break;
     }
-  } else if (
-    type === 'conversation.init'
-  ) {
-    ctx.response.body = wireMessage('Thanks for subscribing to awesome broadcast.');
+  } else if (type === 'conversation.init') {
+    maybeMessage = 'Thanks for subscribing to awesome broadcast.';
+  }
+
+  if (maybeMessage) {
+    ctx.response.body = wireMessage(maybeMessage);
   }
 });
 
-const getBroadcastStats = async (appKey: string) => {
-  const response = await fetch(`${romanBroadcast}`, { method: 'GET', headers: { 'app-key': appKey } });
-  return response.json();
-};
+const getBroadcastStats = async (appKey: string) =>
+  fetch(`${romanBroadcast}`, { method: 'GET', headers: { 'app-key': appKey } }).then(r => r.json());
 
-const convertStats = ({ report }: { report: any[] }) => {
-  return report
-  .map(({ type, count }: { type: string, count: number }) => `${type}: ${count}`)
+const convertStats = ({ report }: { report: { type: string, count: number }[] }) =>
+  report
+  .map(({ type, count }) => `${type}: ${count}`)
   .join('\n');
-};
 
 const getConfigurationForAuth = async (authToken: string) => {
   const authConfiguration = await Deno.readTextFile(authConfigurationPath).then(text => JSON.parse(text));
