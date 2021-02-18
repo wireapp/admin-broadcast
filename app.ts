@@ -15,7 +15,8 @@ router.post('/roman', async (ctx: RouterContext) => {
   const { admins, appKey } = await getConfigurationForAuth(authorizationToken);
   ctx.assert(admins && appKey, 404, 'No Roman auth found.');
 
-  const { type, text, userId } = await ctx.request.body({ type: 'json' }).value;
+  const { type, text, userId }: { type: string, text: string, userId: string }
+    = await ctx.request.body({ type: 'json' }).value;
   ctx.response.status = 200;
 
   if (admins.includes(userId)) {
@@ -23,13 +24,20 @@ router.post('/roman', async (ctx: RouterContext) => {
       type === 'conversation.init' ||
       (type === 'conversation.new_text' && text.startsWith('/help'))
     ) {
-      ctx.response.body = wireMessage('Write `/broadcast message` to broadcast the message to users.');
+      ctx.response.body = wireMessage('Write `/broadcast message` to broadcast the message to users. Or /stats <broadcast id> for stats');
     } else if (
       type === 'conversation.new_text'
       && text.startsWith('/broadcast')
     ) {
-      const { message } = await broadcastTextToWire(text.substring(10), appKey);
-      ctx.response.body = wireMessage(`_${message}_`);
+      const stats = await broadcastTextToWire(text.substring(10), appKey);
+      ctx.response.body = wireMessage(convertStats(stats));
+    } else if (
+      type === 'conversation.new_text'
+      && text.startsWith('/stats')
+    ) {
+      const broadcastId = text.substring(6).trim();
+      const stats = await getBroadcastStats(broadcastId, appKey);
+      ctx.response.body = wireMessage(convertStats(stats));
     }
   } else if (
     type === 'conversation.init'
@@ -37,6 +45,21 @@ router.post('/roman', async (ctx: RouterContext) => {
     ctx.response.body = wireMessage('Thanks for subscribing to awesome broadcast.');
   }
 });
+
+const getBroadcastStats = async (broadcastId: string, appKey: string) => {
+  const response = await fetch(
+    `${romanBroadcast}?id=${broadcastId}`,
+    { method: 'GET', headers: { 'app-key': appKey } }
+  );
+  return response.json();
+};
+
+const convertStats = ({ broadcastId, report }: { broadcastId: string, report: any[] }) => {
+  const reportData = report
+  .map(({ type, count }: { type: string, count: number }) => `${type}: ${count}`)
+  .join('\n');
+  return `Broadcast ID: ${broadcastId}\n${reportData}`;
+};
 
 const getConfigurationForAuth = async (authToken: string) => {
   const authConfiguration = await Deno.readTextFile(authConfigurationPath).then(text => JSON.parse(text));
