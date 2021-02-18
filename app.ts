@@ -35,8 +35,7 @@ router.post('/roman', async (ctx: RouterContext) => {
       type === 'conversation.new_text'
       && text.startsWith('/stats')
     ) {
-      const broadcastId = text.substring(6).trim();
-      const stats = await getBroadcastStats(broadcastId, appKey);
+      const stats = await getBroadcastStats(appKey);
       ctx.response.body = wireMessage(convertStats(stats));
     }
   } else if (
@@ -46,19 +45,15 @@ router.post('/roman', async (ctx: RouterContext) => {
   }
 });
 
-const getBroadcastStats = async (broadcastId: string, appKey: string) => {
-  const response = await fetch(
-    `${romanBroadcast}?id=${broadcastId}`,
-    { method: 'GET', headers: { 'app-key': appKey } }
-  );
+const getBroadcastStats = async (appKey: string) => {
+  const response = await fetch(`${romanBroadcast}`, { method: 'GET', headers: { 'app-key': appKey } });
   return response.json();
 };
 
-const convertStats = ({ broadcastId, report }: { broadcastId: string, report: any[] }) => {
-  const reportData = report
+const convertStats = ({ report }: { report: any[] }) => {
+  return report
   .map(({ type, count }: { type: string, count: number }) => `${type}: ${count}`)
   .join('\n');
-  return `Broadcast ID: ${broadcastId}\n${reportData}`;
 };
 
 const getConfigurationForAuth = async (authToken: string) => {
