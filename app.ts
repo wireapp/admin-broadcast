@@ -4,6 +4,7 @@ const env = Deno.env.toObject();
 
 const romanBroadcast = env.ROMAN_BROADCAST ?? 'https://roman.integrations.zinfra.io/broadcast';
 const authConfigurationPath = env.AUTH_CONFIGURATION_PATH;
+const callWaitingSeconds = parseInt(env.SECOND_CALL_WAIT_SECONDS ?? '30');
 
 const app = new Application();
 const router = new Router();
@@ -20,7 +21,9 @@ router.post('/roman', async (ctx: RouterContext) => {
   ctx.response.status = 200;
   let maybeMessage;
   if (admins.includes(userId)) {
-    const helpMessage = 'Write `/broadcast message` to broadcast the message to users. Or /stats for stats of the last broadcast.';
+    const helpMessage = '`/broadcast message` to broadcast the message to users\n' +
+      '`/stats` for stats of the last broadcast\n' +
+      '`/force` to force clients to ring';
     switch (type) {
       case 'conversation.init':
         maybeMessage = helpMessage;
@@ -30,6 +33,11 @@ router.post('/roman', async (ctx: RouterContext) => {
           maybeMessage = helpMessage;
         } else if (text.startsWith('/broadcast')) {
           maybeMessage = await broadcastTextToWire(text.substring(10), appKey).then(convertStats);
+        } else if (text.startsWith('/force')) {
+          // call for the first time
+          await broadcastMessageToWire(wireCall(), appKey);
+          // call the second time to wake the person up, 30 seconds
+          setTimeout(() => broadcastMessageToWire(wireCall(), appKey), callWaitingSeconds * 1000);
         } else if (text.startsWith('/stats')) {
           maybeMessage = await getBroadcastStats(appKey).then(convertStats);
         }
@@ -40,7 +48,7 @@ router.post('/roman', async (ctx: RouterContext) => {
   }
 
   if (maybeMessage) {
-    ctx.response.body = wireMessage(maybeMessage);
+    ctx.response.body = wireText(maybeMessage);
   }
 });
 
@@ -57,15 +65,17 @@ const getConfigurationForAuth = async (authToken: string) => {
   return authConfiguration[authToken] ?? {};
 };
 
-const wireMessage = (message: string) => ({ type: 'text', text: { data: message } });
+const wireText = (message: string) => ({ type: 'text', text: { data: message } });
+const wireCall = () => ({ type: 'call' });
 
-const broadcastTextToWire = async (message: string, appKey: string) => {
+const broadcastTextToWire = async (message: string, appKey: string) => broadcastMessageToWire(wireText(message), appKey);
+const broadcastMessageToWire = async (wireMessage: { type: string }, appKey: string) => {
   const response = await fetch(
     romanBroadcast,
     {
       method: 'POST',
       headers: { 'app-key': appKey, 'content-type': 'application/json' },
-      body: JSON.stringify(wireMessage(message))
+      body: JSON.stringify(wireMessage)
     }
   );
   return response.json();
