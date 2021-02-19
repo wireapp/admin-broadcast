@@ -35,9 +35,9 @@ router.post('/roman', async (ctx: RouterContext) => {
           maybeMessage = await broadcastTextToWire(text.substring(10), appKey).then(convertStats);
         } else if (text.startsWith('/force')) {
           // call for the first time
-          await broadcastMessageToWire(wireCall(), appKey);
+          broadcastMessageToWire(wireCall(), appKey)
           // call the second time to wake the person up, 30 seconds
-          setTimeout(() => broadcastMessageToWire(wireCall(), appKey), callWaitingSeconds * 1000);
+          .then(() => setTimeout(() => broadcastMessageToWire(wireCall(), appKey), callWaitingSeconds * 1000));
         } else if (text.startsWith('/stats')) {
           maybeMessage = await getBroadcastStats(appKey).then(convertStats);
         }
