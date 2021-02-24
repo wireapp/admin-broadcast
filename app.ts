@@ -23,7 +23,8 @@ router.post('/roman', async (ctx: RouterContext) => {
   if (admins.includes(userId)) {
     const helpMessage = '`/broadcast message` to broadcast the message to users\n' +
       '`/stats` for stats of the last broadcast\n' +
-      '`/force` to force clients to ring';
+      '`/force` to force clients to ring\n' +
+      '`/version` to print current application version.';
     switch (type) {
       case 'conversation.init':
         maybeMessage = helpMessage;
@@ -47,6 +48,10 @@ router.post('/roman', async (ctx: RouterContext) => {
     }
   } else if (type === 'conversation.init') {
     maybeMessage = 'Thanks for subscribing to awesome broadcast.';
+  }
+
+  if (!maybeMessage && type === 'conversation.new_text' && text.startsWith('/version')) {
+    maybeMessage = await readVersion();
   }
 
   if (maybeMessage) {
@@ -90,6 +95,10 @@ router.get('/status', ({ response }) => {
 });
 // technical endpoint to display the version
 router.get('/version', async ({ response }) => {
+  response.body = { version: readVersion() };
+});
+
+const readVersion = async () => {
   let version: string | undefined;
   const releaseFilePath = Deno.env.get('RELEASE_FILE_PATH');
   if (releaseFilePath) {
@@ -98,8 +107,8 @@ router.get('/version', async ({ response }) => {
     } catch {
     }
   }
-  response.body = { version: version ?? 'development' };
-});
+  return version ?? 'development';
+};
 // log all failures that were not handled
 app.use(async (ctx, next) => {
   try {
