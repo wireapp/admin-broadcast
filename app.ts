@@ -20,9 +20,8 @@ router.post('/roman', async (ctx: RouterContext) => {
   ctx.response.status = 200;
   let maybeMessage;
   if (admins.includes(userId)) {
-    const helpMessage = '`/broadcast message` to broadcast the message to users\n' +
+    const helpMessage = '`/broadcast message` to broadcast the message to users and ring their phones\n' +
       '`/stats` for stats of the last broadcast\n' +
-      '`/force` to force clients to ring\n' +
       '`/version` to print current application version.';
     switch (type) {
       case 'conversation.init':
