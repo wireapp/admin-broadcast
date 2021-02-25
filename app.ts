@@ -4,7 +4,6 @@ const env = Deno.env.toObject();
 
 const romanBroadcast = env.ROMAN_BROADCAST ?? 'https://roman.integrations.zinfra.io/broadcast';
 const authConfigurationPath = env.AUTH_CONFIGURATION_PATH;
-const callWaitingSeconds = parseInt(env.SECOND_CALL_WAIT_SECONDS ?? '30');
 
 const app = new Application();
 const router = new Router();
