@@ -85,10 +85,7 @@ const getConfigurationForAuth = async (authToken: string) => {
 
 // wire messages definition
 const wireText = (message: string) => ({ type: 'text', text: { data: message } });
-const wireCall = (type: 'GROUPSTART' | 'GROUPLEAVE') => ({
-  type: 'conversation.call',
-  call: { version: '3.0', type, resp: false, sessid: '' }
-});
+const wireCall = (type: 'GROUPSTART' | 'GROUPLEAVE') => ({ type: 'call', call: { version: '3.0', type, resp: false, sessid: '' } });
 const wireCallStart = () => wireCall('GROUPSTART');
 const wireCallDrop = () => wireCall('GROUPLEAVE');
 // send data to Roman
