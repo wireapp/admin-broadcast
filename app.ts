@@ -16,48 +16,52 @@ router.post('/roman', async (ctx: RouterContext) => {
   ctx.assert(admins && appKey, 404, 'No Roman auth found.');
 
   const body = await ctx.request.body({ type: 'json' }).value;
-  const { type } = body;
+  const { type, userId } = body;
+  ctx.response.body = determineHandle(type)({ body, isUserAdmin: admins.includes(userId), appKey });
   ctx.response.status = 200;
+});
 
-  if (type === 'conversation.call') {
-    console.log(JSON.stringify(body));
-    return;
-  }
+interface HandlerDto {
+  body: any
+  isUserAdmin: boolean
+  appKey: string
+}
 
-  const { text, userId }: { type: string, text: string, userId: string } = body;
+const helpMessage = '' +
+  '`/broadcast message` to broadcast the message to users and ring their phones\n' +
+  '`/stats` for stats of the last broadcast\n' +
+  '`/version` to print current application version.';
+
+const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
   let maybeMessage;
-  if (admins.includes(userId)) {
-    const helpMessage = '`/broadcast message` to broadcast the message to users and ring their phones\n' +
-      '`/stats` for stats of the last broadcast\n' +
-      '`/version` to print current application version.';
-    switch (type) {
-      case 'conversation.init':
-        maybeMessage = helpMessage;
-        break;
-      case 'conversation.new_text':
-        if (text.startsWith('/help')) {
-          maybeMessage = helpMessage;
-        } else if (text.startsWith('/broadcast')) {
-          maybeMessage = await broadcastTextToWire(text.substring(10), appKey).then(convertStats);
-          // ring the phones
-          await broadcastMessageToWire(wireCall(), appKey).catch((e) => console.log(e));
-        } else if (text.startsWith('/stats')) {
-          maybeMessage = await getBroadcastStats(appKey).then(convertStats);
-        }
-        break;
+  const { text } = body;
+  // admin commands
+  if (isUserAdmin) {
+    if (text.startsWith('/help')) {
+      maybeMessage = helpMessage;
+    } else if (text.startsWith('/broadcast')) {
+      // 10 chars removes "/broadcast "
+      maybeMessage = await broadcastTextToWire(text.substring(10), appKey).then(convertStats);
+      // ring the phones and do not wait on result
+      broadcastMessageToWire(wireCallStart(), appKey).catch((e) => console.log(e));
+    } else if (text.startsWith('/stats')) {
+      maybeMessage = await getBroadcastStats(appKey).catch(e => console.log(e)).then(convertStats);
     }
-  } else if (type === 'conversation.init') {
-    maybeMessage = 'Thanks for subscribing to awesome broadcast.';
   }
-
-  if (!maybeMessage && type === 'conversation.new_text' && text.startsWith('/version')) {
+  // this can be from user as well as admin
+  if (text.startsWith('/version')) {
     maybeMessage = await readVersion();
   }
 
-  if (maybeMessage) {
-    ctx.response.body = wireText(maybeMessage);
-  }
-});
+  return maybeMessage ? wireText(maybeMessage) : undefined;
+};
+
+const determineHandle = (type: string) => handles[type] ?? (_ => undefined);
+const handles: Record<string, ((handler: HandlerDto) => any) | undefined> = {
+  'conversation.init': ({ isUserAdmin }) => wireText(isUserAdmin ? helpMessage : 'Subscription confirmed.'),
+  'conversation.new_text': handleNewText,
+  'conversation.call': (_) => wireCallDrop()
+};
 
 const getBroadcastStats = async (appKey: string) =>
   fetch(`${romanBroadcast}`, { method: 'GET', headers: { 'app-key': appKey } }).then(r => r.json());
@@ -72,21 +76,22 @@ const getConfigurationForAuth = async (authToken: string) => {
   return authConfiguration[authToken] ?? {};
 };
 
+// wire messages definition
 const wireText = (message: string) => ({ type: 'text', text: { data: message } });
-const wireCall = () => ({ type: 'call' });
-
+const wireCall = (type: 'GROUPSTART' | 'GROUPLEAVE') => ({ type: 'call', call: { version: '3.0', type, resp: false, sessid: '' } });
+const wireCallStart = () => wireCall('GROUPSTART');
+const wireCallDrop = () => wireCall('GROUPLEAVE');
+// send data to Roman
 const broadcastTextToWire = async (message: string, appKey: string) => broadcastMessageToWire(wireText(message), appKey);
-const broadcastMessageToWire = async (wireMessage: { type: string }, appKey: string) => {
-  const response = await fetch(
+const broadcastMessageToWire = async (wireMessage: { type: string }, appKey: string) =>
+  fetch(
     romanBroadcast,
     {
       method: 'POST',
       headers: { 'app-key': appKey, 'content-type': 'application/json' },
       body: JSON.stringify(wireMessage)
     }
-  );
-  return response.json();
-};
+  ).then(r => r.json());
 
 /* ----------------- WIRE Common ----------------- */
 // k8s indication the service is running
