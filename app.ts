@@ -15,9 +15,16 @@ router.post('/roman', async (ctx: RouterContext) => {
   const { admins, appKey } = await getConfigurationForAuth(authorizationToken);
   ctx.assert(admins && appKey, 404, 'No Roman auth found.');
 
-  const { type, text, userId }: { type: string, text: string, userId: string }
-    = await ctx.request.body({ type: 'json' }).value;
+  const body = await ctx.request.body({ type: 'json' }).value;
+  const { type } = body;
   ctx.response.status = 200;
+
+  if (type === 'conversation.call') {
+    console.log(JSON.stringify(body));
+    return;
+  }
+
+  const { text, userId }: { type: string, text: string, userId: string } = body;
   let maybeMessage;
   if (admins.includes(userId)) {
     const helpMessage = '`/broadcast message` to broadcast the message to users and ring their phones\n' +
