@@ -42,8 +42,8 @@ const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
     } else if (text.startsWith('/broadcast')) {
       // 10 chars removes "/broadcast "
       maybeMessage = await broadcastTextToWire(text.substring(10), appKey).then(convertStats);
-      // ring the phones and do not wait on result
-      broadcastMessageToWire(wireCallStart(), appKey).catch((e) => console.log(e));
+      // ring the phones
+      await broadcastMessageToWire(wireCallStart(), appKey).catch((e) => console.log(e));
     } else if (text.startsWith('/stats')) {
       maybeMessage = await getBroadcastStats(appKey).catch(e => console.log(e)).then(convertStats);
     }
@@ -56,11 +56,18 @@ const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
   return maybeMessage ? wireText(maybeMessage) : undefined;
 };
 
+const handleCall = async ({ body }: HandlerDto) => {
+  // drop the call if somebody responded yes and joined it
+  if (body?.call?.resp == true) {
+    return wireCallDrop();
+  }
+};
+
 const determineHandle = (type: string) => handles[type] ?? (_ => undefined);
 const handles: Record<string, ((handler: HandlerDto) => any) | undefined> = {
   'conversation.init': ({ isUserAdmin }) => wireText(isUserAdmin ? helpMessage : 'Subscription confirmed.'),
   'conversation.new_text': handleNewText,
-  'conversation.call': (_) => wireCallDrop()
+  'conversation.call': handleCall
 };
 
 const getBroadcastStats = async (appKey: string) =>
