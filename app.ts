@@ -17,7 +17,7 @@ router.post('/roman', async (ctx: RouterContext) => {
 
   const body = await ctx.request.body({ type: 'json' }).value;
   const { type, userId } = body;
-  ctx.response.body = determineHandle(type)({ body, isUserAdmin: admins.includes(userId), appKey });
+  ctx.response.body = await determineHandle(type)({ body, isUserAdmin: admins.includes(userId), appKey });
   ctx.response.status = 200;
 });
 
@@ -42,8 +42,8 @@ const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
     } else if (text.startsWith('/broadcast')) {
       // 10 chars removes "/broadcast "
       maybeMessage = await broadcastTextToWire(text.substring(10), appKey).then(convertStats);
-      // ring the phones
-      await broadcastMessageToWire(wireCallStart(), appKey).catch((e) => console.log(e));
+      // ring the phones and do not wait on response
+      broadcastMessageToWire(wireCallStart(), appKey).catch((e) => console.log(e));
     } else if (text.startsWith('/stats')) {
       maybeMessage = await getBroadcastStats(appKey).catch(e => console.log(e)).then(convertStats);
     }
