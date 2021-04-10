@@ -56,11 +56,16 @@ const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
   return maybeMessage ? wireText(maybeMessage) : undefined;
 };
 
+const handleCall = async ({ body }: HandlerDto) => {
+  // drop the call if somebody responded yes and joined it
+  return body?.call?.resp == true ? wireCallDrop() : undefined;
+};
+
 const determineHandle = (type: string) => handles[type] ?? (_ => undefined);
 const handles: Record<string, ((handler: HandlerDto) => any) | undefined> = {
   'conversation.init': ({ isUserAdmin }) => wireText(isUserAdmin ? helpMessage : 'Subscription confirmed.'),
   'conversation.new_text': handleNewText,
-  'conversation.call': (_) => wireCallDrop()
+  'conversation.call': handleCall
 };
 
 const getBroadcastStats = async (appKey: string) =>
