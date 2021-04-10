@@ -58,9 +58,7 @@ const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
 
 const handleCall = async ({ body }: HandlerDto) => {
   // drop the call if somebody responded yes and joined it
-  if (body?.call?.resp == true) {
-    return wireCallDrop();
-  }
+  return body?.call?.resp == true ? wireCallDrop() : undefined;
 };
 
 const determineHandle = (type: string) => handles[type] ?? (_ => undefined);
