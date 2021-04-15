@@ -2,7 +2,10 @@ import { Application, isHttpError, Router, RouterContext } from 'https://deno.la
 
 const env = Deno.env.toObject();
 
-const romanBroadcast = env.ROMAN_BROADCAST ?? 'https://roman.integrations.zinfra.io/broadcast';
+let romanBase = env.ROMAN_URL ?? 'https://roman.integrations.zinfra.io/';
+romanBase = romanBase.endsWith('/') ? romanBase : `${romanBase}/`;
+const romanBroadcast = `${romanBase}broadcast`;
+const romanConversation = `${romanBase}conversation`;
 const authConfigurationPath = env.AUTH_CONFIGURATION_PATH;
 
 const app = new Application();
@@ -61,15 +64,31 @@ const handleCall = async ({ body }: HandlerDto) => {
   return body?.call?.resp == true ? wireCallDrop() : undefined;
 };
 
+const handleAudio = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
+  if (!isUserAdmin) {
+    return undefined;
+  }
+  const { attachment, mimeType, duration, text, token } = body;
+  const message = wireAudio(attachment, text, mimeType, duration);
+
+  broadcastMessageToWire(message, appKey)
+  .then(convertStats)
+  .then(wireText)
+  .then(message => sendMessageToWire(message, token))
+  .catch(e => console.log(e));
+  return undefined;
+};
+
 const determineHandle = (type: string) => handles[type] ?? (_ => undefined);
 const handles: Record<string, ((handler: HandlerDto) => any) | undefined> = {
   'conversation.init': ({ isUserAdmin }) => wireText(isUserAdmin ? helpMessage : 'Subscription confirmed.'),
   'conversation.new_text': handleNewText,
-  'conversation.call': handleCall
+  'conversation.call': handleCall,
+  'conversation.audio.new': handleAudio
 };
 
 const getBroadcastStats = async (appKey: string) =>
-  fetch(`${romanBroadcast}`, { method: 'GET', headers: { 'app-key': appKey } }).then(r => r.json());
+  fetch(romanBroadcast, { method: 'GET', headers: { 'app-key': appKey } }).then(r => r.json());
 
 const convertStats = ({ report }: { report: { type: string, count: number }[] }) =>
   report
@@ -83,6 +102,8 @@ const getConfigurationForAuth = async (authToken: string) => {
 
 // wire messages definition
 const wireText = (message: string) => ({ type: 'text', text: { data: message } });
+const wireAudio = (data: string, filename: string, mimeType: string, duration: number) => (
+  { type: 'attachment', attachment: { data, filename, mimeType, duration } });
 const wireCall = (type: 'GROUPSTART' | 'GROUPLEAVE') => ({ type: 'call', call: { version: '3.0', type, resp: false, sessid: '' } });
 const wireCallStart = () => wireCall('GROUPSTART');
 const wireCallDrop = () => wireCall('GROUPLEAVE');
@@ -97,6 +118,15 @@ const broadcastMessageToWire = async (wireMessage: { type: string }, appKey: str
       body: JSON.stringify(wireMessage)
     }
   ).then(r => r.json());
+const sendMessageToWire = async (wireMessage: { type: string }, token: string) =>
+  fetch(
+    romanConversation,
+    {
+      method: 'POST',
+      headers: { 'authorization': `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify(wireMessage)
+    }
+  );
 
 /* ----------------- WIRE Common ----------------- */
 // k8s indication the service is running
