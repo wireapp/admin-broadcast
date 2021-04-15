@@ -68,6 +68,9 @@ const handleAudio = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
   if (!isUserAdmin) {
     return undefined;
   }
+
+  console.log(body);
+
   const { attachment, mimeType, duration, text, token } = body;
   const message = wireAudio(attachment, text, mimeType, duration);
 
