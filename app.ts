@@ -71,8 +71,8 @@ const handleAudio = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
 
   console.log(body);
 
-  const { attachment, mimeType, duration, text, token } = body;
-  const message = wireAudio(attachment, text, mimeType, duration);
+  const { attachment, mimeType, duration, text, token, levels } = body;
+  const message = wireAudio(attachment, text, mimeType, duration, levels);
 
   broadcastMessageToWire(message, appKey)
   .then(convertStats)
@@ -105,8 +105,8 @@ const getConfigurationForAuth = async (authToken: string) => {
 
 // wire messages definition
 const wireText = (message: string) => ({ type: 'text', text: { data: message } });
-const wireAudio = (data: string, filename: string, mimeType: string, duration: number) => (
-  { type: 'attachment', attachment: { data, filename, mimeType, duration } });
+const wireAudio = (data: string, filename: string, mimeType: string, duration: number, levels: any) => (
+  { type: 'attachment', attachment: { data, filename, mimeType, duration, levels } });
 const wireCall = (type: 'GROUPSTART' | 'GROUPLEAVE') => ({ type: 'call', call: { version: '3.0', type, resp: false, sessid: '' } });
 const wireCallStart = () => wireCall('GROUPSTART');
 const wireCallDrop = () => wireCall('GROUPLEAVE');
