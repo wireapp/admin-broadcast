@@ -105,7 +105,7 @@ const getConfigurationForAuth = async (authToken: string) => {
 
 // wire messages definition
 const wireText = (message: string) => ({ type: 'text', text: { data: message } });
-const wireAudio = (data: string, filename: string, mimeType: string, duration: number, levels: any) => (
+const wireAudio = (data: string, filename: string, mimeType: string, duration: number, levels: []) => (
   { type: 'attachment', attachment: { data, filename, mimeType, duration, levels } });
 const wireCall = (type: 'GROUPSTART' | 'GROUPLEAVE') => ({ type: 'call', call: { version: '3.0', type, resp: false, sessid: '' } });
 const wireCallStart = () => wireCall('GROUPSTART');
