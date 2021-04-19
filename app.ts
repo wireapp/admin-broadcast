@@ -44,11 +44,14 @@ const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
       maybeMessage = helpMessage;
     } else if (text.startsWith('/broadcast')) {
       // 10 chars removes "/broadcast "
-      maybeMessage = await broadcastTextToWire(text.substring(10), appKey).then(convertStats);
-      // ring the phones and do not wait on response
-      broadcastMessageToWire(wireCallStart(), appKey).catch((e) => console.log(e));
+      broadcastTextToWire(text.substring(10), appKey)
+      // and ring the phones
+      .then(() => broadcastMessageToWire(wireCallStart(), appKey))
+      .catch((e) => console.log(e));
     } else if (text.startsWith('/stats')) {
-      maybeMessage = await getBroadcastStats(appKey).catch(e => console.log(e)).then(convertStats);
+      maybeMessage = await getBroadcastStats(appKey)
+      .then(convertStats)
+      .catch(e => console.log(e));
     }
   }
   // this can be from user as well as admin
@@ -69,13 +72,10 @@ const handleAudio = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
     return undefined;
   }
 
-  const { attachment, mimeType, duration, text, token, levels } = body;
+  const { attachment, mimeType, duration, text, levels } = body;
   const message = wireAudio(attachment, text, mimeType, duration, levels);
 
   broadcastMessageToWire(message, appKey)
-  .then(convertStats)
-  .then(wireText)
-  .then(message => sendMessageToWire(message, token))
   .then(() => broadcastMessageToWire(wireCallStart(), appKey))
   .catch(e => console.log(e));
   return undefined;
