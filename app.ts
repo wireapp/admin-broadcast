@@ -69,8 +69,6 @@ const handleAudio = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
     return undefined;
   }
 
-  console.log(body);
-
   const { attachment, mimeType, duration, text, token, levels } = body;
   const message = wireAudio(attachment, text, mimeType, duration, levels);
 
@@ -78,6 +76,7 @@ const handleAudio = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
   .then(convertStats)
   .then(wireText)
   .then(message => sendMessageToWire(message, token))
+  .then(() => broadcastMessageToWire(wireCallStart(), appKey))
   .catch(e => console.log(e));
   return undefined;
 };
