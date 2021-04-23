@@ -137,7 +137,7 @@ router.get('/status', ({ response }) => {
 });
 // technical endpoint to display the version
 router.get('/version', async ({ response }) => {
-  response.body = { version: readVersion() };
+  response.body = { version: await readVersion() };
 });
 
 const readVersion = async () => {
