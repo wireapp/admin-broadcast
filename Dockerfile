@@ -1,10 +1,10 @@
-FROM hayd/alpine-deno:1.7.2
+FROM hayd/alpine-deno:1.9.2
 
 WORKDIR /app
 
-COPY app.ts .
+COPY *.ts .
 
-RUN deno cache app.ts
+RUN deno cache deps.ts
 
 # ------------------- Wire common -----------------
 # create version file
