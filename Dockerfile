@@ -1,10 +1,10 @@
-FROM hayd/alpine-deno:1.7.2
+FROM hayd/deno:debian-1.9.2
 
 WORKDIR /app
 
-COPY app.ts .
+COPY *.ts .
 
-RUN deno cache app.ts
+RUN deno cache deps.ts
 
 # ------------------- Wire common -----------------
 # create version file
@@ -15,4 +15,4 @@ RUN echo $release_version > $RELEASE_FILE_PATH
 
 EXPOSE 8080
 
-CMD ["run", "--allow-net", "--allow-env", "--allow-read","app.ts"]
+CMD ["run", "--quiet", "--allow-net", "--allow-env", "--allow-read", "app.ts"]
