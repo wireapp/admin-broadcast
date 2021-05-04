@@ -10,7 +10,7 @@ export const startWireApp = async (app: Application, router: Router) => {
   // basic stats about the service
   router.get('/', async ({ response }: RouterContext) => {
     response.status = 200;
-    response.body = { status: 'Online', version, message: 'Wire Admin Broadcast.' };
+    response.body = { status: 'online', version, message: 'Wire Admin Broadcast.' };
   });
   // k8s indication the service is running
   router.get('/status', ({ response }: RouterContext) => {

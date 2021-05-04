@@ -5,7 +5,8 @@ const env = Deno.env.toObject();
 
 let romanBase = env.ROMAN_URL ?? 'https://roman.integrations.zinfra.io/';
 romanBase = romanBase.endsWith('/') ? romanBase : `${romanBase}/`;
-const romanBroadcast = `${romanBase}broadcast`;
+const romanBroadcastV1 = `${romanBase}broadcast`;
+const romanAssetsBroadcastV2 = `${romanBase}broadcast/v2`;
 const authConfigurationPath = env.AUTH_CONFIGURATION_PATH;
 
 const app = new Application();
@@ -77,33 +78,16 @@ const handleCall = async ({ body }: HandlerDto) => {
   return maybeMessage;
 };
 
-const handleAudio = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
-  if (!isUserAdmin) {
-    return undefined;
-  }
-
-  const { attachment, mimeType, duration, text, levels, userId, messageId } = body;
-  logDebug(`Handling audio broadcast - creating message.`, { userId, messageId });
-  const message = wireAudio(attachment, text, mimeType, duration, levels);
-
-  logDebug(`Broadcasting the audio`, { userId, messageId });
-
-  // noinspection ES6MissingAwait, we don't need to wait for this
-  asyncBroadcast(message, appKey, userId, messageId);
-
-  return wireText('Audio broadcast queued for execution. Use /stats to see the metrics.');
-};
-
 const asyncBroadcast = async (message: WireMessage, appKey: string, userId: string, messageId: string) => {
   try {
-    const { broadcastId } = await broadcastMessageToWire(message, appKey);
+    const { broadcastId } = await broadcastToWire(message, appKey);
     logDebug(
-      `Text broadcast sent, received broadcast id: ${broadcastId}. Storing for user ${userId}`,
+      `Broadcast sent, received broadcast id: ${broadcastId}. Storing for user ${userId}`,
       { broadcastId, userId, messageId }
     );
     broadcastIdDatabase[userId] = broadcastId;
     // ring the phones
-    await broadcastMessageToWire(wireCallStart(), appKey);
+    await broadcastToWire(wireCallStart(), appKey);
     logDebug(
       `Call started for broadcast ${broadcastIdDatabase[userId]}`,
       { userId, broadcastId: broadcastIdDatabase[userId], messageId });
@@ -112,18 +96,32 @@ const asyncBroadcast = async (message: WireMessage, appKey: string, userId: stri
   }
 };
 
+const handleAsset = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
+  if (!isUserAdmin) {
+    return undefined;
+  }
+  const { mimeType, image, text, levels, duration, size, meta, userId, messageId } = body;
+  const payload = { size, mimeType, levels, duration, filename: text ?? image.replace('/', '.'), ...meta };
+
+  // noinspection ES6MissingAwait, we don't need to wait for this
+  asyncBroadcast(payload, appKey, userId, messageId);
+  return wireText('Asset broadcast queued for execution. Use /stats to see the metrics.');
+};
+
 // fancy switch case for generic request handling
-const determineHandle = (type: string) => handles[type] ?? (_ => undefined);
+const determineHandle = (type: string) => handles[type] ?? ((_) => undefined);
 const handles: Record<string, ((handler: HandlerDto) => any) | undefined> = {
   'conversation.init': ({ isUserAdmin }) => wireText(isUserAdmin ? helpMessage : 'Subscription confirmed.'),
   'conversation.new_text': handleNewText,
   'conversation.call': handleCall,
-  'conversation.audio.new': handleAudio
+  'conversation.audio.new': handleAsset,
+  'conversation.new_image': handleAsset,
+  'conversation.file.new': handleAsset
 };
 
 const getBroadcastStats = async (appKey: string, broadcastId: string | undefined = undefined) => {
   logDebug(`Retrieving broadcast stats for broadcast ${broadcastId}.`, { broadcastId });
-  const url = broadcastId ? `${romanBroadcast}?id=${broadcastId}` : romanBroadcast;
+  const url = broadcastId ? `${romanBroadcastV1}?id=${broadcastId}` : romanBroadcastV1;
   const request = await fetch(url, { method: 'GET', headers: { 'app-key': appKey } }).then(receiveJsonOrLogError);
   return convertStats(request);
 };
@@ -140,27 +138,25 @@ const getConfigurationForAuth = async (authToken: string) => {
 
 // wire messages definition
 const wireText = (message: string) => ({ type: 'text', text: { data: message } });
-const wireAudio = (data: string, filename: string, mimeType: string, duration: number, levels: []) => (
-  { type: 'attachment', attachment: { data, filename, mimeType, duration, levels } });
 const wireCall = (type: 'GROUPSTART' | 'GROUPLEAVE') => ({ type: 'call', call: { version: '3.0', type, resp: false, sessid: '' } });
 const wireCallStart = () => wireCall('GROUPSTART');
 const wireCallDrop = () => wireCall('GROUPLEAVE');
 
-interface WireMessage {
-  type: string
-}
+type WireMessage = any
 
 // send data to Roman
-const broadcastMessageToWire = async (wireMessage: WireMessage, appKey: string) =>
-  fetch(
-    romanBroadcast,
+const broadcastToWire = async (wireMessage: WireMessage, appKey: string) => {
+  // if it has property type, then the message is v1, otherwise it is an asset v2
+  const url = wireMessage['type'] ? romanBroadcastV1 : romanAssetsBroadcastV2;
+  return fetch(
+    url,
     {
       method: 'POST',
       headers: { 'app-key': appKey, 'content-type': 'application/json' },
       body: JSON.stringify(wireMessage)
     }
   ).then(receiveJsonOrLogError);
-
+};
 
 // and finally start the app
 await startWireApp(app, router);
