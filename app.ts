@@ -54,8 +54,8 @@ const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
       // send this asynchronously and do not block
       // 10 chars removes "/broadcast "
       const message = wireText(text.substring(10));
-      // noinspection ES6MissingAwait, we don't need to wait for this
-      asyncBroadcast(message, appKey, userId, messageId);
+      asyncBroadcast(message, appKey, userId, messageId)
+      .then((broadcastId) => logDebug(`Broadcast ${broadcastId} executed.`, { broadcastId, userId, messageId }));
       maybeMessage = 'Broadcast queued for execution. Use /stats to see the broadcast metrics.';
     } else if (text.startsWith('/stats')) {
       maybeMessage = await getBroadcastStats(appKey, broadcastIdDatabase[userId]);
@@ -78,24 +78,6 @@ const handleCall = async ({ body }: HandlerDto) => {
   return maybeMessage;
 };
 
-const asyncBroadcast = async (message: WireMessage, appKey: string, userId: string, messageId: string) => {
-  try {
-    const { broadcastId } = await broadcastToWire(message, appKey);
-    logDebug(
-      `Broadcast sent, received broadcast id: ${broadcastId}. Storing for user ${userId}`,
-      { broadcastId, userId, messageId }
-    );
-    broadcastIdDatabase[userId] = broadcastId;
-    // ring the phones
-    await broadcastToWire(wireCallStart(), appKey);
-    logDebug(
-      `Call started for broadcast ${broadcastIdDatabase[userId]}`,
-      { userId, broadcastId: broadcastIdDatabase[userId], messageId });
-  } catch (e) {
-    logError(`An exception during broadcast with message id: ${messageId}`, e);
-  }
-};
-
 const handleAsset = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
   if (!isUserAdmin) {
     return undefined;
@@ -103,8 +85,8 @@ const handleAsset = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
   const { mimeType, image, text, levels, duration, size, meta, userId, messageId } = body;
   const payload = { size, mimeType, levels, duration, filename: text ?? image.replace('/', '.'), ...meta };
 
-  // noinspection ES6MissingAwait, we don't need to wait for this
-  asyncBroadcast(payload, appKey, userId, messageId);
+  asyncBroadcast(payload, appKey, userId, messageId)
+  .then((broadcastId) => logDebug(`Asset broadcast ${broadcastId} executed.`, { broadcastId, userId, messageId }));
   return wireText('Asset broadcast queued for execution. Use /stats to see the metrics.');
 };
 
@@ -137,12 +119,30 @@ const getConfigurationForAuth = async (authToken: string) => {
 };
 
 // wire messages definition
+type WireMessage = any // just a type alias, it's an object
 const wireText = (message: string) => ({ type: 'text', text: { data: message } });
 const wireCall = (type: 'GROUPSTART' | 'GROUPLEAVE') => ({ type: 'call', call: { version: '3.0', type, resp: false, sessid: '' } });
 const wireCallStart = () => wireCall('GROUPSTART');
 const wireCallDrop = () => wireCall('GROUPLEAVE');
 
-type WireMessage = any
+const asyncBroadcast = async (message: WireMessage, appKey: string, userId: string, messageId: string) => {
+  try {
+    const { broadcastId } = await broadcastToWire(message, appKey);
+    logDebug(
+      `Broadcast sent, received broadcast id: ${broadcastId}. Storing for user ${userId}`,
+      { broadcastId, userId, messageId }
+    );
+    broadcastIdDatabase[userId] = broadcastId;
+    // ring the phones
+    await broadcastToWire(wireCallStart(), appKey);
+    logDebug(
+      `Call started for broadcast ${broadcastIdDatabase[userId]}`,
+      { userId, broadcastId: broadcastIdDatabase[userId], messageId });
+    return broadcastId;
+  } catch (e) {
+    logError(`An exception during broadcast with message id: ${messageId}`, e);
+  }
+};
 
 // send data to Roman
 const broadcastToWire = async (wireMessage: WireMessage, appKey: string) => {
