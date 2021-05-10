@@ -43,26 +43,26 @@ const helpMessage = '' +
 const handleNewText = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
   let maybeMessage;
   const { text, userId, messageId } = body;
-
+  const userText = text?.data ?? '';
   // admin commands
   if (isUserAdmin) {
-    if (text.startsWith('/help')) {
+    if (userText.startsWith('/help')) {
       maybeMessage = helpMessage;
-    } else if (text.startsWith('/broadcast')) {
+    } else if (userText.startsWith('/broadcast')) {
       logInfo('Executing text broadcast. Sending text.', { userId, messageId });
 
       // send this asynchronously and do not block
       // 10 chars removes "/broadcast "
-      const message = wireText(text.substring(10));
+      const message = wireText(userText.substring(10));
       asyncBroadcast(message, appKey, userId, messageId)
       .then((broadcastId) => logDebug(`Broadcast ${broadcastId} executed.`, { broadcastId, userId, messageId }));
       maybeMessage = 'Broadcast queued for execution. Use /stats to see the broadcast metrics.';
-    } else if (text.startsWith('/stats')) {
+    } else if (userText.startsWith('/stats')) {
       maybeMessage = await getBroadcastStats(appKey, broadcastIdDatabase[userId]);
     }
   }
   // this can be from user as well as admin
-  if (text.startsWith('/version')) {
+  if (userText.startsWith('/version')) {
     maybeMessage = await readVersion();
   }
 
@@ -79,13 +79,11 @@ const handleCall = async ({ body }: HandlerDto) => {
 };
 
 const handleAsset = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
-  if (!isUserAdmin) {
+  if (!isUserAdmin || !body.attachment) {
     return undefined;
   }
-  const { mimeType, image, text, levels, duration, size, meta, userId, messageId } = body;
-  const payload = { size, mimeType, levels, duration, filename: text ?? image.replace('/', '.'), ...meta };
-
-  asyncBroadcast(payload, appKey, userId, messageId)
+  const { userId, messageId } = body;
+  asyncBroadcast(body.attachment, appKey, userId, messageId)
   .then((broadcastId) => logDebug(`Asset broadcast ${broadcastId} executed.`, { broadcastId, userId, messageId }));
   return wireText('Asset broadcast queued for execution. Use /stats to see the metrics.');
 };
