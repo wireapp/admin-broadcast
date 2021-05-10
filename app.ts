@@ -97,7 +97,8 @@ const handles: Record<string, ((handler: HandlerDto) => any) | undefined> = {
   'conversation.call': handleCall,
   'conversation.audio.new': handleAsset,
   'conversation.new_image': handleAsset,
-  'conversation.file.new': handleAsset
+  'conversation.file.new': handleAsset,
+  'conversation.asset.data': handleAsset
 };
 
 const getBroadcastStats = async (appKey: string, broadcastId: string | undefined = undefined) => {
