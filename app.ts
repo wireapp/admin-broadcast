@@ -5,8 +5,7 @@ const env = Deno.env.toObject();
 
 let romanBase = env.ROMAN_URL ?? 'https://roman.integrations.zinfra.io/';
 romanBase = romanBase.endsWith('/') ? romanBase : `${romanBase}/`;
-const romanBroadcastV1 = `${romanBase}broadcast`;
-const romanAssetsBroadcastV2 = `${romanBase}broadcast/v2`;
+const romanBroadcast = `${romanBase}broadcast`;
 const authConfigurationPath = env.AUTH_CONFIGURATION_PATH;
 
 const app = new Application();
@@ -95,15 +94,12 @@ const handles: Record<string, ((handler: HandlerDto) => any) | undefined> = {
   'conversation.init': ({ isUserAdmin }) => wireText(isUserAdmin ? helpMessage : 'Subscription confirmed.'),
   'conversation.new_text': handleNewText,
   'conversation.call': handleCall,
-  'conversation.audio.new': handleAsset,
-  'conversation.new_image': handleAsset,
-  'conversation.file.new': handleAsset,
   'conversation.asset.data': handleAsset
 };
 
 const getBroadcastStats = async (appKey: string, broadcastId: string | undefined = undefined) => {
   logDebug(`Retrieving broadcast stats for broadcast ${broadcastId}.`, { broadcastId });
-  const url = broadcastId ? `${romanBroadcastV1}?id=${broadcastId}` : romanBroadcastV1;
+  const url = broadcastId ? `${romanBroadcast}?id=${broadcastId}` : romanBroadcast;
   const request = await fetch(url, { method: 'GET', headers: { 'app-key': appKey } }).then(receiveJsonOrLogError);
   return convertStats(request);
 };
@@ -145,18 +141,14 @@ const asyncBroadcast = async (message: WireMessage, appKey: string, userId: stri
 };
 
 // send data to Roman
-const broadcastToWire = async (wireMessage: WireMessage, appKey: string) => {
-  // if it has property type, then the message is v1, otherwise it is an asset v2
-  const url = wireMessage['type'] ? romanBroadcastV1 : romanAssetsBroadcastV2;
-  return fetch(
-    url,
-    {
-      method: 'POST',
-      headers: { 'app-key': appKey, 'content-type': 'application/json' },
-      body: JSON.stringify(wireMessage)
-    }
-  ).then(receiveJsonOrLogError);
-};
+const broadcastToWire = async (wireMessage: WireMessage, appKey: string) => fetch(
+  romanBroadcast,
+  {
+    method: 'POST',
+    headers: { 'app-key': appKey, 'content-type': 'application/json' },
+    body: JSON.stringify(wireMessage)
+  }
+).then(receiveJsonOrLogError);
 
 // and finally start the app
 await startWireApp(app, router);
