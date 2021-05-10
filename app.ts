@@ -83,7 +83,8 @@ const handleAsset = async ({ body, isUserAdmin, appKey }: HandlerDto) => {
     return undefined;
   }
   const { userId, messageId } = body;
-  asyncBroadcast(body.attachment, appKey, userId, messageId)
+  const message = { type: 'attachment', attachment: body.attachment };
+  asyncBroadcast(message, appKey, userId, messageId)
   .then((broadcastId) => logDebug(`Asset broadcast ${broadcastId} executed.`, { broadcastId, userId, messageId }));
   return wireText('Asset broadcast queued for execution. Use /stats to see the metrics.');
 };
