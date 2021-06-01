@@ -112,9 +112,9 @@ docker build -t admin-broadcast .
 ```bash
 docker run \ 
 -v "${PWD}/config.json:/app/config.json" \  
--e AUTH_CONFIGURATION_PATH='/app/config.json' \  
--e ROMAN_URL='https://proxy.services.wire.com/' \  # or your own Roman instance
--e PORT='8080' \ 
+-e AUTH_CONFIGURATION_PATH="/app/config.json" \  
+-e ROMAN_URL="https://proxy.services.wire.com/" \  # or your own Roman instance
+-e PORT="8080" \ 
 -p 8080:8080 \ 
 --name admin-broadcast --rm admin-broadcast
 ```
