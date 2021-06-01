@@ -8,11 +8,12 @@ The bot is based on the JavaScript runtime [Deno](https://deno.land/) and [Oak](
 
 ## Configuration
 
-The bot uses few environmental variables for its configuration, for complete list see first lines of the [code](app.ts).
+The bot uses few environmental variables for its configuration, the usage is in the [code](app.ts).
 
 ```bash
 ROMAN_URL                 # Domain where the Roman is running. By default Wire Staging https://roman.integrations.zinfra.io/ 
 AUTH_CONFIGURATION_PATH   # Path to a file with admin configurations.
+PORT                      # Port on where does the app run. By default 8080.
 ```
 
 ### Auth configuration
@@ -54,3 +55,71 @@ Say you want to enable broadcasts for users with IDs `62253374-cdda-4901-a710-48
   }
 }
 ```
+
+## Deployment
+
+In order to run the Admin Broadcast Bot you need following:
+
+- a public IP address / host name, where Roman can reach the bot
+- a machine where you can run the bot
+
+There are basically two options, how to run the bot - either on bare metal, or in the Docker container.
+
+### On bare metal
+
+For this to work, you need to install Deno runtime - [see official docs](https://deno.land/manual/getting_started/installation).
+
+1. Clone this git repository
+2. Create auth configuration JSON as described in the previous chapter - say in the same git folder with name `config.json`
+
+```bash
+touch config.json
+# and fill it with required values   
+```
+
+3. Set necessary environment variables
+
+```bash
+export AUTH_CONFIGURATION_PATH="${PWD}/config.json"
+export ROMAN_URL="https://proxy.services.wire.com/" # or your own Roman instance
+export PORT="8080"
+```
+
+4. Execute the application
+
+```bash
+deno run --allow-net --allow-env --allow-read app.ts
+```
+
+### Docker Container
+
+1. Clone this git repository
+2. Create auth configuration JSON as described in the previous chapter - say in the same git folder with name `config.json`
+
+```bash
+touch config.json
+# and fill it with required values   
+```
+
+3. Build the docker image
+
+```bash
+docker build -t admin-broadcast .
+```
+
+4. Run the container
+
+```bash
+docker run \ 
+-v "${PWD}/config.json:/app/config.json" \  
+-e AUTH_CONFIGURATION_PATH='/app/config.json' \  
+-e ROMAN_URL='https://proxy.services.wire.com/' \  # or your own Roman instance
+-e PORT='8080' \ 
+-p 8080:8080 \ 
+--name admin-broadcast --rm admin-broadcast
+```
+
+### Bot Registration
+
+In order to use the bot in Wire you need to complete one more additional step - to register the Bot in the Roman and Wire. The tutorial how to do that
+is [here](https://github.com/wireapp/roman/blob/staging/docs/onboarding.md) - please read [Roman README.md](https://github.com/wireapp/roman/) as well.
