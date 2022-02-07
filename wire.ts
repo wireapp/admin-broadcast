@@ -4,13 +4,21 @@ import { Application, isHttpError, Router, RouterContext } from './deps.ts';
  * Initializes application and starts it up.
  */
 export const startWireApp = async (app: Application, router: Router) => {
+  // read and cache version of the code
+  const version = await readVersion();
+
+  // basic stats about the service
+  router.get('/', async ({ response }: RouterContext) => {
+    response.status = 200;
+    response.body = { status: 'online', version, message: 'Wire Admin Broadcast.' };
+  });
   // k8s indication the service is running
   router.get('/status', ({ response }: RouterContext) => {
     response.status = 200;
   });
   // technical endpoint to display the version
   router.get('/version', async ({ response }: RouterContext) => {
-    response.body = { version: await readVersion() };
+    response.body = { version };
   });
   // log all failures that were not handled
   app.use(async (ctx, next) => {
@@ -23,10 +31,11 @@ export const startWireApp = async (app: Application, router: Router) => {
       throw e;
     }
   });
+  const ignoredEndpoints = new Set(['/status', '/', '/version']);
   // request logging and measuring time
   app.use(async (ctx, next) => {
-    // ignore /status calls
-    if (ctx.request.url.pathname === '/status') {
+    // do not log calls to ignored endpoints
+    if (ignoredEndpoints.has(ctx.request.url.pathname)) {
       return await next();
     }
 
@@ -54,7 +63,6 @@ export const startWireApp = async (app: Application, router: Router) => {
   app.use(router.allowedMethods());
 
   const port = parseInt(Deno.env.get('PORT') ?? '8080');
-  const version = await readVersion();
   app.addEventListener('listen', () => logInfo(`Server up and running on localhost:${port}`, { version }));
   await app.listen({ port });
 };

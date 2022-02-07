@@ -1,4 +1,4 @@
-FROM hayd/deno:debian-1.9.2
+FROM hayd/alpine-deno
 
 WORKDIR /app
 
