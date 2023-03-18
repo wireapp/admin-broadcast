@@ -130,10 +130,10 @@ const asyncBroadcast = async (message: WireMessage, appKey: string, userId: stri
     );
     broadcastIdDatabase[userId] = broadcastId;
     // ring the phones
-    await broadcastToWire(wireCallStart(), appKey);
-    logDebug(
-      `Call started for broadcast ${broadcastIdDatabase[userId]}`,
-      { userId, broadcastId: broadcastIdDatabase[userId], messageId });
+//     await broadcastToWire(wireCallStart(), appKey);
+//     logDebug(
+//       `Call started for broadcast ${broadcastIdDatabase[userId]}`,
+//       { userId, broadcastId: broadcastIdDatabase[userId], messageId });
     return broadcastId;
   } catch (e) {
     logError(`An exception during broadcast with message id: ${messageId}`, e);
